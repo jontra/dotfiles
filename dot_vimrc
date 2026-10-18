@@ -1,0 +1,158 @@
+" execute pathogen#infect()
+
+filetype plugin indent on
+
+if &diff
+    " diff mode
+endif
+
+if has('termguicolors')
+    set termguicolors
+endif
+colorscheme peachpuff
+let g:syntastic_check_on_open = 1
+
+"set lines=55
+set tabstop=4
+set co=120
+set nu
+nmap =j :.!python -m json.tool<CR>
+
+" When editing a file, always jump to the last cursor position
+au BufReadPost * call Cursor_to_last_position()
+fun Cursor_to_last_position()
+    if line("'\"") && line("'\"") <= line("$")
+        exe "normal `\""
+    endif
+endfun
+set sw=4
+
+if &t_Co > 2 || has("gui_running")
+    syntax on
+    set hlsearch
+    " We disable the toolbar, since it makes gvim open in more than 80 columns
+    " if the icons on the toolbar are more than 80 char width
+    set guioptions-=T
+endif
+if version >= 701 && has("gui_running")
+	" this might be able to be replaced by set colorcolumn=80 on VIM 7.3
+    au BufWinEnter *.{c,h,txt,mk,pl,pm,py,sh,css,js,json,java},Makefile call Mark_error_80_ws()
+    fun Mark_error_80_ws()
+        let w:m2=matchadd('ErrorMsg','\%80v.',-1)
+	let w:m2=matchadd('ErrorMsg','\s\+$',-1)
+	let w:m2=matchadd('ErrorMsg','\%u00a0',-1)
+    endfun
+
+endif
+
+set autoindent
+
+nmap <silent> <c-n> :silent noh<CR>
+nmap <F7> :cal CscopeZtoolsToggle()<CR>
+
+" set the scrolling
+"load msdn help for funciton under curser
+nmap <F5> :silent ! start "c:\program files\mozila firefox\firefox.exe" "http://www.google.com/search?hl=en&btnI=I\%27m+Feeling+Lucky&q=site\%3Amsdn.microsoft.com\%20<cword>"<CR>
+:set ch=2 
+
+au BufNewFile,BufRead *.c.* set syn=c
+au BufNewFile,BufRead *.cc.* set syn=c
+au BufNewFile,BufRead *.h.* set syn=c
+au BufNewFile,BufRead *.mk.* set syn=make
+
+"set tags+=~/ms_tags.out
+"set tags+=~/msddk_tags.out
+
+"
+" gvimdiff
+"
+if &diff
+  " ignore whitespaces
+  noremap <a-i> :set diffopt=context:1000,filler,iwhite<cr>
+  " unfold
+  noremap <F12> <c-W>hzRgg<c-W>lzRgg
+  " go right
+  noremap <F11> <c-W>l
+  " go left
+  noremap <F10> <c-W>h
+  " get from right to left (must be on left!!)
+  noremap <silent> <f2> :diffget<cr>
+  " get from left to right (must be on left!!)
+  noremap <silent> <f3> :diffput<cr>
+  " next match
+  map <tab> ]czz
+  " previous match
+  map <s-tab> [czz
+  " update the diff
+  map <silent> <f5> :diffup<cr>
+  imap <silent> <f5> :diffup<cr>
+  " quit  (well, duhh !)
+  cnoremap q qa
+  set co=240
+  set lines=76
+  exe "normal \<c-w>="
+  "always split equally at the middle
+  set noea
+  set guioptions-=rRlL
+  "fold manually only
+  set fdm=manual
+  set diffopt=filler,context:5000
+  " set guifont=Lucida_Console:h8
+  " set guifont=Consolas:h9:b:cANSI
+endif
+
+" hi DiffAdd term=bold ctermbg=4 guibg=#d6ffb0
+" hi DiffChange term=bold ctermbg=5 guibg=#f6e8d0
+" hi DiffDelete term=bold cterm=bold ctermfg=4 ctermbg=6 gui=bold guifg=lightGray guibg=DarkGray
+" hi DiffText term=reverse cterm=bold ctermbg=1 gui=bold guibg=#e3c1a5
+
+set hidden " allow hiding unsaved buffers
+
+" recursive grep that skips ctags, scope and temp files
+set grepprg=grep\ -rn\ --exclude=\"*~\"\ --exclude=\".\#*\"\ --exclude=\"tags\"\ --exclude=\"cscope*.files\"\ --exclude=\"ncscope*.out\"\ $*\ %:p:h:h 
+
+
+map <F6> O<Esc>i/* DONT CHECK IN<return>=======<return> * DONT CHECK IN */<Esc>
+nmap <F12> :cal VSplitToggle()<CR>
+
+set is
+
+"This is for showmarks script
+"set compatible
+
+fun VSplitToggle()
+    if !exists("g:vsplit_on")
+	let g:vsplit_on = 0
+	let g:columns_old = &columns
+    endif
+    let g:vsplit_on = !g:vsplit_on
+    if g:vsplit_on == 1
+	:se columns=165
+	:vsplit
+    else
+	" closes all windows except current window 
+	:only
+	exe ":set columns=" . g:columns_old 
+    endif
+endfun
+fun CscopeZtoolsToggle()
+    if !exists("g:cscope_ztools_on")
+	let g:cscope_ztools_on = 0
+    endif
+    let g:cscope_ztools_on = !g:cscope_ztools_on
+    if g:cscope_ztools_on == 1
+	:cal CscopeCTagsInit()
+	:cs add ~/cscope_ztools.out c:/ztools
+    else
+	:cs kill 1
+    endif
+endfun
+
+nmap <F11> :cal VSplitToggle()<CR>
+
+"imap <C-Space> <C-x><C-i>
+:set ch=2
+
+nmap <F2><F2> I<Esc>lyWGo<Esc>pA<Backspace>: [C] <Esc>I<Esc>Whi
+
+set guifont=Monaco:h14

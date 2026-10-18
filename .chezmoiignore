@@ -1,0 +1,10 @@
+# Not home-directory targets: scripts, data for other steps, and dirs still installed by the scripts.
+README.md
+bootstrap.sh
+remote-install.sh
+skills
+herdr
+# Only the laptop has these.
+{{- if ne .chezmoi.os "darwin" }}
+.config/git/act.inc
+{{- end }}
