@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Entry point for both machines. Podium runs it on every boot (dx ws dotfiles set <repo>); on the
-# laptop run it once after cloning to ~/conf. Installs chezmoi if missing, applies the dotfiles from
-# this checkout, then runs the per-OS script for what chezmoi does not manage yet.
+# Entry point for both machines. Podium runs it on every boot (dx ws dotfiles set <repo>) from the
+# clone at ~/.dotfiles; on the laptop run it once after cloning to ~/dotfiles. Installs chezmoi if
+# missing, applies the dotfiles from this checkout, links skills and Herdr plugins (extras.sh), and on
+# the laptop runs the private ~/conf/install.sh for what is not public.
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -15,7 +16,7 @@ mkdir -p "$HOME/.config/chezmoi"
 printf 'sourceDir = "%s"\n' "$here" > "$HOME/.config/chezmoi/chezmoi.toml"
 chezmoi apply --source "$here"
 
-case "$(uname -s)" in
-  Darwin) bash "$here/install.sh" ;;
-  *)      bash "$here/remote-install.sh" ;;
-esac
+bash "$here/extras.sh"
+if [ "$(uname -s)" = Darwin ] && [ -f "$HOME/conf/install.sh" ]; then
+  bash "$HOME/conf/install.sh"
+fi

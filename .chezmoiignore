@@ -1,7 +1,7 @@
 # Not home-directory targets: scripts, data for other steps, and dirs still installed by the scripts.
 README.md
 bootstrap.sh
-remote-install.sh
+extras.sh
 skills
 herdr
 # Only the laptop has these.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Runs ON a Podium workspace, after chezmoi applied the dotfiles (bootstrap.sh). Installs what
-# chezmoi does not manage yet: Claude skills, Herdr plugins. Safe to re-run.
+# Runs after chezmoi applied the dotfiles (bootstrap.sh), on the laptop and on Podium workspaces.
+# Links what chezmoi does not manage: Claude skills, Herdr plugins. Safe to re-run.
 set -euo pipefail
 
 conf="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,11 +9,9 @@ log() { printf '\033[32m>\033[0m %s\n' "$*"; }
 # zshrc, gitconfig, vimrc and the zsh theme are managed by chezmoi (bootstrap.sh runs it first).
 
 # Claude Code skills: link every skill directory in skills/ into ~/.claude/skills.
-# podium-new-workspace is laptop-only (it drives dx ws and the Mac Keychain), so it is skipped here.
 mkdir -p "$HOME/.claude/skills"
 for skill_dir in "$conf"/skills/*/; do
   name="$(basename "$skill_dir")"
-  [ "$name" = podium-new-workspace ] && continue
   ln -sfn "${skill_dir%/}" "$HOME/.claude/skills/$name"
   log "skill: $name"
 done
