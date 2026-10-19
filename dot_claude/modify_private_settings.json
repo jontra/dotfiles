@@ -1,0 +1,4 @@
+#!/bin/sh
+# Claude Code defaults on every machine. chezmoi feeds the current ~/.claude/settings.json on stdin and
+# writes what this prints; only the keys set here change, the rest (Podium's proxy, hooks, picker) stays.
+exec jq -n '[inputs] | (.[0] // {}) | .model = "opus"'
