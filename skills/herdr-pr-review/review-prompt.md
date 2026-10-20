@@ -1,19 +1,6 @@
 Review {{PR_URL}} ("{{TITLE}}"). This worktree is already checked out at the PR head ({{SHORT_SHA}}, local branch {{BRANCH}}); diff it against its merge-base with origin/{{BASE}}.
 
-Work in two phases. Yoni reads the phase 1 summary while phase 2 runs, so finish and print it before starting any review.
-
-## Phase 1: big-picture summary
-
-Read the PR description, its commits, the linked ticket if any, and the diff. Then print a summary in simple words, for a reader who hasn't seen this code:
-- **The problem**: what was broken or missing, and who or what it affected.
-- **The solution**: what the PR changes, and how it works end to end (the main flow and the components it touches).
-- **Why this approach**: the reasoning behind the design, from the PR description, commits, ticket, or code. Where the reasoning isn't stated, say so and give your best inference, labelled as inference.
-- **Other ways to solve it**: two or three alternatives a senior engineer would weigh (different layer, different data model, reuse of something that already exists in the repo, doing less), each with the trade-off against the chosen approach in one or two sentences. Say whether any alternative looks clearly better; if the chosen one is right, say why in one line.
-- **Deploy risk**: what could go wrong when it ships (migrations, data, ordering, compatibility).
-
-Phase 1 is done when this summary is printed in the terminal and written to {{REPORT}}.
-
-## Phase 2: full review, two reviewers, one conversation
+## Full review, two reviewers, one conversation
 
 1. Start a second reviewer with Herdr, a Codex agent:
    - Split your own pane: `herdr pane split --current --direction right --cwd "$PWD" --no-focus`.
@@ -34,6 +21,6 @@ Phase 1 is done when this summary is printed in the terminal and written to {{RE
    - source: Claude, Codex, or both, and whether the other reviewer agreed after discussion
    Then one line: how many low items were set aside (not listed). Then a short "rejected" list: findings either reviewer raised that did not survive verification, with the reason, one line each.
 
-Phase 2 is done when the comments are printed in the terminal and appended to {{REPORT}} below the summary. Leave the Codex pane open; the user may want to continue the conversation there.
+Done when the comments are printed in the terminal and written to {{REPORT}}. Leave the Codex pane open; the user may want to continue the conversation there.
 
 Keep everything local: do not post comments, reviews, or approvals to GitHub, and do not push.
