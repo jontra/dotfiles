@@ -1,4 +1,15 @@
 #!/bin/sh
 # Claude Code defaults on every machine. chezmoi feeds the current ~/.claude/settings.json on stdin and
 # writes what this prints; only the keys set here change, the rest (Podium's proxy, hooks, picker) stays.
+# On the Mac, when ACT's managed settings exist, Claude also goes through claude-model-router
+# (~/.config/claude-model-router) and the picker offers the ACT Foundry models from those settings.
+cloud="/Library/Application Support/ACT/Claude/settings-cloud.json"
+if [ "$(uname -s)" = Darwin ] && [ -r "$cloud" ]; then
+  exec jq -n --slurpfile cloud "$cloud" '[inputs] | (.[0] // {}) | .model = "opus"
+    | .env.ANTHROPIC_BASE_URL = "http://127.0.0.1:8787"
+    | .env.ENABLE_TOOL_SEARCH = "true"
+    | .env.CLAUDE_CODE_MAX_CONTEXT_TOKENS = "922000"
+    | .modelPicker.replaceBuiltInOptions = false
+    | .modelPicker.options = [$cloud[0].modelPicker.options[] | select(.model | startswith("act-foundry/"))]'
+fi
 exec jq -n '[inputs] | (.[0] // {}) | .model = "opus"'

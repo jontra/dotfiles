@@ -1,0 +1,14 @@
+{{- /* The gateway origin comes from ACT's managed Claude settings at apply time, so it never lands in this
+       public repo. .chezmoiignore skips this file when that settings file is missing. */ -}}
+{{- $cloud := include "/Library/Application Support/ACT/Claude/settings-cloud.json" | fromJson -}}
+{
+  "port": 8787,
+  "routes": [
+    {
+      "modelPrefix": "act-foundry/",
+      "origin": {{ $cloud.env.ANTHROPIC_BASE_URL | toJson }},
+      "tokenCommand": "/usr/local/bin/claude-act-cloud-token",
+      "refreshSeconds": 240
+    }
+  ]
+}

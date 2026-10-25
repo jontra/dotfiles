@@ -7,4 +7,12 @@ herdr
 # Only the laptop has these.
 {{- if ne .chezmoi.os "darwin" }}
 .config/git/act.inc
+.config/claude-model-router
+.local/bin/claude-router
+Library
+7-claude-model-router
+{{- end }}
+# The router config reads its gateway from ACT's managed Claude settings; without them there is none.
+{{- if not (stat "/Library/Application Support/ACT/Claude/settings-cloud.json") }}
+.config/claude-model-router/config.json
 {{- end }}
