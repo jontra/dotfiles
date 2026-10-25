@@ -14,7 +14,14 @@ export PATH="$HOME/.local/bin:$PATH"
 # Remember this checkout as the source, so plain `chezmoi apply|diff|edit` work afterwards.
 mkdir -p "$HOME/.config/chezmoi"
 printf 'sourceDir = "%s"\n' "$here" > "$HOME/.config/chezmoi/chezmoi.toml"
-chezmoi apply --source "$here"
+# On Podium there is no terminal to answer chezmoi's "changed since chezmoi last wrote it" prompt, and boot
+# steps after this one edit managed files (dx completion install rewrites .zshrc). The repo is the source
+# of truth there, so overwrite; on the laptop keep the prompt.
+if [ "${PODIUM:-}" = true ]; then
+  chezmoi apply --source "$here" --force
+else
+  chezmoi apply --source "$here"
+fi
 
 bash "$here/extras.sh"
 if [ "$(uname -s)" = Darwin ] && [ -f "$HOME/conf/install.sh" ]; then
