@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Usage: start-review.sh <pr-number-or-url> [--dry-run]
-# Creates a Herdr worktree workspace at the PR head, starts a Claude agent in it,
-# and sends it review-prompt.md (Claude + Codex unified review, kept local).
+# Creates a Herdr worktree workspace at the PR head, starts a Codex agent in it,
+# and sends it review-prompt.md (full review, kept local).
 set -euo pipefail
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,9 +23,7 @@ TITLE="$(field title)"; SHA="$(field headRefOid)"; BASE="$(field baseRefName)"; 
 BRANCH="review/pr-$PR"
 AGENT="review-$PR"
 REPORT="/tmp/review-pr-$PR.md"
-# Reviewer models. Override per run with env vars.
-CLAUDE_MODEL="${REVIEW_CLAUDE_MODEL:-claude-fable-5-1[1m]}"
-CLAUDE_EFFORT="${REVIEW_CLAUDE_EFFORT:-high}"
+# Reviewer model. Override per run with env vars.
 CODEX_MODEL="${REVIEW_CODEX_MODEL:-act-foundry/gpt-6-astra}"
 CODEX_EFFORT="${REVIEW_CODEX_EFFORT:-high}"
 
@@ -50,10 +48,10 @@ PY
 
 if [ "$DRY_RUN" = "--dry-run" ]; then
   WORKTREE="<worktree path>"
-  echo "would create worktree branch=$BRANCH base=$SHA label='review · PR $PR', start agent $AGENT (claude $CLAUDE_MODEL/$CLAUDE_EFFORT, codex $CODEX_MODEL/$CODEX_EFFORT)"
+  echo "would create worktree branch=$BRANCH base=$SHA label='review · PR $PR', start agent $AGENT (codex $CODEX_MODEL/$CODEX_EFFORT)"
   echo "--- prompt ---"
   render_prompt PR_URL="$URL" TITLE="$TITLE" SHORT_SHA="${SHA:0:8}" BRANCH="$BRANCH" BASE="$BASE" \
-    WORKTREE="$WORKTREE" CODEX_AGENT="$AGENT-codex" REPORT="$REPORT" CODEX_MODEL="$CODEX_MODEL" CODEX_EFFORT="$CODEX_EFFORT"
+    WORKTREE="$WORKTREE" REPORT="$REPORT"
   exit 0
 fi
 
@@ -71,13 +69,20 @@ for _ in $(seq 1 30); do
 done
 herdr pane get "$PANE" | grep -q "\"cwd\":\"$WORKTREE\"" || { echo "error: pane $PANE never reached $WORKTREE" >&2; exit 1; }
 
-herdr agent start "$AGENT" --kind claude --pane "$PANE" --timeout 60000 -- --model "$CLAUDE_MODEL" --effort "$CLAUDE_EFFORT" >/dev/null
+herdr agent start "$AGENT" --kind codex --pane "$PANE" --timeout 60000 -- -m "$CODEX_MODEL" -c "model_reasoning_effort=$CODEX_EFFORT" >/dev/null
+
+# The repo's .codex/config.toml declares a Stop hook; a fresh worktree makes Codex ask to trust it
+# ("Hook 1 · new"). Trust it and close the dialog so the prompt lands on an idle agent.
+if herdr agent get "$AGENT" | grep -q '"agent_status":"blocked"'; then
+  herdr agent send-keys "$AGENT" t >/dev/null
+  for _ in 1 2 3; do herdr agent send-keys "$AGENT" esc >/dev/null; sleep 1; done
+fi
 
 PROMPT="$(render_prompt PR_URL="$URL" TITLE="$TITLE" SHORT_SHA="${SHA:0:8}" BRANCH="$BRANCH" BASE="$BASE" \
-  WORKTREE="$WORKTREE" CODEX_AGENT="$AGENT-codex" REPORT="$REPORT" CODEX_MODEL="$CODEX_MODEL" CODEX_EFFORT="$CODEX_EFFORT")"
+  WORKTREE="$WORKTREE" REPORT="$REPORT")"
 herdr agent prompt "$AGENT" "$PROMPT" >/dev/null
 
 echo "pr=$PR title=\"$TITLE\""
-echo "workspace=$WORKSPACE pane=$PANE agent=$AGENT codex_agent=$AGENT-codex"
+echo "workspace=$WORKSPACE pane=$PANE agent=$AGENT"
 echo "worktree=$WORKTREE branch=$BRANCH head=${SHA:0:8}"
 echo "report=$REPORT"
