@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Usage: start-review.sh <pr-number-or-url> [--dry-run]
 # Creates a Herdr worktree workspace at the PR head with a Claude agent (left pane) and a Codex
-# agent (right pane), renders the prompts into /tmp/review-pr-<n>/, and starts Claude, which
-# runs its review, hands Codex its review, leads the discussion and writes the final report.
+# agent (right pane), renders the prompts into /tmp/review-pr-<n>/, and starts both reviews in
+# parallel. Claude then leads the discussion and writes the final report.
 set -euo pipefail
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -98,7 +98,7 @@ herdr agent start "$CODEX_AGENT" --kind codex --pane "$CODEX_PANE" --timeout 600
   -m "$CODEX_MODEL" -c "model_reasoning_effort=$CODEX_EFFORT" >/dev/null
 # The repo's .codex/config.toml declares a Stop hook; a fresh worktree makes Codex ask to trust it
 # ("Hook 1 · new"), and an "Update available" dialog can also block startup. Trust and close them
-# so Claude's first prompt lands on an idle agent.
+# so the review prompt lands on an idle agent.
 if herdr agent get "$CODEX_AGENT" | grep -q '"agent_status":"blocked"'; then
   herdr agent send-keys "$CODEX_AGENT" t >/dev/null
   for _ in 1 2 3; do herdr agent send-keys "$CODEX_AGENT" esc >/dev/null; sleep 1; done
@@ -106,6 +106,8 @@ fi
 
 herdr agent start "$CLAUDE_AGENT" --kind claude --pane "$CLAUDE_PANE" --timeout 60000 -- \
   --model "$CLAUDE_MODEL" --effort "$CLAUDE_EFFORT" >/dev/null
+
+herdr agent prompt "$CODEX_AGENT" "Read and follow $DIR/codex-prompt.md" >/dev/null
 herdr agent prompt "$CLAUDE_AGENT" "Read and follow $DIR/claude-prompt.md" >/dev/null
 
 echo "pr=$PR title=\"$TITLE\""

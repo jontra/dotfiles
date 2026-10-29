@@ -1,4 +1,4 @@
-Review {{PR_URL}} ("{{TITLE}}"). This worktree is already checked out at the PR head ({{SHORT_SHA}}, local branch {{BRANCH}}); diff it against its merge-base with origin/{{BASE}}. A Claude agent ({{CLAUDE_AGENT}}) in the pane beside you reviews the same PR; after your review it will message you to discuss the findings.
+Review {{PR_URL}} ("{{TITLE}}"). This worktree is already checked out at the PR head ({{SHORT_SHA}}, local branch {{BRANCH}}); diff it against its merge-base with origin/{{BASE}}. A Claude agent ({{CLAUDE_AGENT}}) in the pane beside you reviews the same PR in parallel; once both reviews are done it will message you to discuss the findings.
 
 ## Full review
 

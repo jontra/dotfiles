@@ -1,4 +1,4 @@
-Review {{PR_URL}} ("{{TITLE}}") together with a Codex agent, and own the final report. This worktree is already checked out at the PR head ({{SHORT_SHA}}, local branch {{BRANCH}}); diff it against its merge-base with origin/{{BASE}}. Codex runs in the pane beside you as Herdr agent `{{CODEX_AGENT}}`; its instructions are in `{{DIR}}/codex-prompt.md`. All hand-offs go through files in `{{DIR}}`.
+Review {{PR_URL}} ("{{TITLE}}") together with a Codex agent, and own the final report. This worktree is already checked out at the PR head ({{SHORT_SHA}}, local branch {{BRANCH}}); diff it against its merge-base with origin/{{BASE}}. Codex runs in the pane beside you as Herdr agent `{{CODEX_AGENT}}`, reviewing the same PR in parallel; its instructions are in `{{DIR}}/codex-prompt.md`. All hand-offs go through files in `{{DIR}}`.
 
 ## 1. Your review
 
@@ -11,8 +11,7 @@ Done when `claude-findings.md` is written. Do not read any `codex-*` file before
 
 ## 2. Codex's review
 
-1. `herdr agent prompt {{CODEX_AGENT}} "Read and follow {{DIR}}/codex-prompt.md"`
-2. Wait for `{{DIR}}/codex-findings.md` with a background command: `for i in $(seq 1 120); do [ -f {{DIR}}/codex-findings.md ] && exit 0; sleep 30; done; exit 1`. If it times out, read Codex's pane (`herdr pane read {{CODEX_PANE}} --source visible`): a blocked dialog needs `herdr agent send-keys {{CODEX_AGENT}} esc`; anything else, stop and tell the user.
+Wait for `{{DIR}}/codex-findings.md` with a background command: `for i in $(seq 1 120); do [ -f {{DIR}}/codex-findings.md ] && exit 0; sleep 30; done; exit 1`. If it times out, read Codex's pane (`herdr pane read {{CODEX_PANE}} --source visible`): a blocked dialog needs `herdr agent send-keys {{CODEX_AGENT}} esc`, then `herdr agent prompt {{CODEX_AGENT}} "Read and follow {{DIR}}/codex-prompt.md"`; anything else, stop and tell the user.
 
 ## 3. Discussion
 
