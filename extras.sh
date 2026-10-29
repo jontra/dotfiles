@@ -15,6 +15,11 @@ for skill_dir in "$conf"/skills/*/; do
   ln -sfn "${skill_dir%/}" "$HOME/.claude/skills/$name"
   log "skill: $name"
 done
+# Drop links to skills that were removed from this repo; other links in ~/.claude/skills are left alone.
+for link in "$HOME/.claude/skills"/*; do
+  [ -L "$link" ] && [ ! -e "$link" ] && [[ "$(readlink "$link")" == "$conf/skills/"* ]] || continue
+  rm "$link" && log "removed stale skill: $(basename "$link")"
+done
 
 # Herdr plugins (the image ships herdr; `herdr plugin link` only needs the binary, not a running server).
 if command -v herdr >/dev/null 2>&1; then
