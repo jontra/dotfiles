@@ -5,7 +5,7 @@ description: Full PR review by a Claude and a Codex agent side by side in one He
 
 # Full PR review
 
-One PR = one Herdr worktree workspace (`review · PR <n>`, branch `review/pr-<n>` at the PR head) with two agents side by side:
+One PR = one Herdr worktree workspace (labelled `<author>-PR-<n>`, the PR author's GitHub login, branch `review/pr-<n>` at the PR head) with two agents side by side:
 
 - left: Claude `review-<n>-claude` (`claude-fable-5-1`, high effort), which leads;
 - right: Codex `review-<n>-codex` (`act-foundry/gpt-6-astra`, high effort).

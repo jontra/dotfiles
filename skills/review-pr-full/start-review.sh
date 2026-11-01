@@ -17,9 +17,11 @@ PR="${PR_ARG##*/pull/}"; PR="${PR%%/*}"
 REPO_ROOT="$(git worktree list --porcelain | awk 'NR==1 {print $2}')"
 cd "$REPO_ROOT"
 
-PR_JSON="$(gh pr view "$PR" --json title,headRefOid,baseRefName,url)"
+PR_JSON="$(gh pr view "$PR" --json title,headRefOid,baseRefName,url,author)"
 field() { python3 -c 'import json,sys; print(json.loads(sys.argv[1])[sys.argv[2]])' "$PR_JSON" "$1"; }
 TITLE="$(field title)"; SHA="$(field headRefOid)"; BASE="$(field baseRefName)"; URL="$(field url)"
+AUTHOR="$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["author"]["login"])' "$PR_JSON")"
+LABEL="$AUTHOR-PR-$PR"
 
 BRANCH="review/pr-$PR"
 CLAUDE_AGENT="review-$PR-claude"
@@ -60,7 +62,7 @@ PY
 
 if [ "$DRY_RUN" = "--dry-run" ]; then
   CODEX_PANE="<codex pane>"
-  echo "would create worktree branch=$BRANCH base=$SHA label='review · PR $PR'"
+  echo "would create worktree branch=$BRANCH base=$SHA label='$LABEL'"
   echo "left pane:  $CLAUDE_AGENT (claude $CLAUDE_MODEL/$CLAUDE_EFFORT)"
   echo "right pane: $CODEX_AGENT (codex $CODEX_MODEL/$CODEX_EFFORT)"
   for f in context-prompt.md claude-prompt.md codex-prompt.md; do
@@ -71,7 +73,7 @@ if [ "$DRY_RUN" = "--dry-run" ]; then
 fi
 
 CREATE_JSON="$(herdr worktree create --cwd "$REPO_ROOT" --branch "$BRANCH" --base "$SHA" \
-  --label "review · PR $PR" --no-focus)"
+  --label "$LABEL" --no-focus)"
 read -r WORKSPACE CLAUDE_PANE WORKTREE < <(python3 -c '
 import json,sys; r=json.loads(sys.argv[1])["result"]
 print(r["workspace"]["workspace_id"], r["root_pane"]["pane_id"], r["worktree"]["path"])' "$CREATE_JSON")
