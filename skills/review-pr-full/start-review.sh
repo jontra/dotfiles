@@ -63,7 +63,7 @@ if [ "$DRY_RUN" = "--dry-run" ]; then
   echo "would create worktree branch=$BRANCH base=$SHA label='review · PR $PR'"
   echo "left pane:  $CLAUDE_AGENT (claude $CLAUDE_MODEL/$CLAUDE_EFFORT)"
   echo "right pane: $CODEX_AGENT (codex $CODEX_MODEL/$CODEX_EFFORT)"
-  for f in claude-prompt.md codex-prompt.md; do
+  for f in context-prompt.md claude-prompt.md codex-prompt.md; do
     echo "--- $f ---"
     render "$f"
   done
@@ -90,7 +90,7 @@ for PANE in "$CLAUDE_PANE" "$CODEX_PANE"; do
 done
 
 mkdir -p "$DIR"
-for f in claude-prompt.md codex-prompt.md; do
+for f in context-prompt.md claude-prompt.md codex-prompt.md; do
   render "$f" > "$DIR/$f"
 done
 
