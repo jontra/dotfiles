@@ -29,7 +29,7 @@ CODEX_AGENT="review-$PR-codex"
 DIR="/tmp/review-pr-$PR"
 REPORT="/tmp/review-pr-$PR.md"
 # Reviewer models. Override per run with env vars.
-CLAUDE_MODEL="${REVIEW_CLAUDE_MODEL:-claude-fable-5-1}"
+CLAUDE_MODEL="${REVIEW_CLAUDE_MODEL:-claude-opus-5-5}"
 CLAUDE_EFFORT="${REVIEW_CLAUDE_EFFORT:-high}"
 CODEX_MODEL="${REVIEW_CODEX_MODEL:-act-foundry/gpt-6-astra}"
 CODEX_EFFORT="${REVIEW_CODEX_EFFORT:-high}"

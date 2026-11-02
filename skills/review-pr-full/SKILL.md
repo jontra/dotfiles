@@ -7,7 +7,7 @@ description: Full PR review by a Claude and a Codex agent side by side in one He
 
 One PR = one Herdr worktree workspace (labelled `<author>-PR-<n>`, the PR author's GitHub login, branch `review/pr-<n>` at the PR head) with two agents side by side:
 
-- left: Claude `review-<n>-claude` (`claude-fable-5-1`, high effort), which leads;
+- left: Claude `review-<n>-claude` (`claude-opus-5-5`, high effort), which leads;
 - right: Codex `review-<n>-codex` (`act-foundry/gpt-6-astra`, high effort).
 
 Both work in parallel, and neither reads the other's findings until its own are written. Each first works out the PR's purpose (body, commits, Linear ticket) and its related PRs, open or merged (same ticket, same files, the stack, the author's other PRs), then runs `/review-pr` against that purpose, and lists alternative ways to reach the goal and follow-ups for after merge. Claude then merges both and runs up to three discussion rounds with Codex until they agree on each finding and its severity. Claude writes the purpose, the related PRs, the confirmed findings (critical, high, medium), the disputed ones with both positions, the alternatives, the follow-ups, and the counts of dropped and low items to `/tmp/review-pr-<n>.md`. Hand-offs go through files in `/tmp/review-pr-<n>/`. Everything stays local: no GitHub comments, no push.
