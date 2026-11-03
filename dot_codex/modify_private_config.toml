@@ -1,2 +1,5 @@
 {{- /* chezmoi:modify-template */ -}}
-{{ .chezmoi.stdin | fromToml | setValueAtPath "tui.copy_on_select" "always" | toToml -}}
+{{ .chezmoi.stdin | fromToml
+   | setValueAtPath "approval_policy" "never"
+   | setValueAtPath "sandbox_mode" "danger-full-access"
+   | setValueAtPath "tui.copy_on_select" "always" | toToml -}}

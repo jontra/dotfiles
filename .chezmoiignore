@@ -6,7 +6,6 @@ skills
 herdr
 # Only the laptop has these.
 {{- if ne .chezmoi.os "darwin" }}
-.codex
 .config/git/act.inc
 .config/claude-model-router
 .local/bin/claude-router
