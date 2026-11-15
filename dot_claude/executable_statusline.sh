@@ -1,5 +1,34 @@
 #!/usr/bin/env bash
-# Claude Code status line: model/effort · context · 5h limit · weekly limit. Reads the JSON Claude Code sends on stdin.
+# Claude Code status line: model/effort · PR and CI · context · 5h limit · weekly limit.
+# Reads the JSON Claude Code sends on stdin. The PR state comes from a per-branch cache that a detached
+# `statusline.sh --pr-refresh` rewrites at most every 2 minutes, so a refresh never waits on GitHub.
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/claude-statusline"
+
+if [ "$1" = "--pr-refresh" ]; then
+  dir=$2 file=$3
+  json=$(cd "$dir" && gh pr view --json number,state,isDraft,statusCheckRollup 2>/dev/null)
+  if [ -z "$json" ]; then
+    echo none
+  else
+    printf '%s' "$json" | jq -r '
+      def bad: IN("FAILURE","TIMED_OUT","CANCELLED","ACTION_REQUIRED","STARTUP_FAILURE","ERROR");
+      .number as $n
+      | [.statusCheckRollup[]? | (.conclusion // .state // "") as $c | (.status // "COMPLETED") as $s
+         | if ($c | bad) then "fail" elif $s != "COMPLETED" or ($c | IN("", "PENDING", "EXPECTED")) then "run" else "ok" end] as $r
+      | ($r | map(select(. == "fail")) | length) as $f
+      | ($r | map(select(. == "run")) | length) as $p
+      | if .state == "MERGED" then "\($n) merged"
+        elif .state == "CLOSED" then "\($n) closed"
+        elif $f > 0 then "\($n) fail \($f)"
+        elif $p > 0 then "\($n) run \($p)"
+        elif .isDraft then "\($n) draft"
+        elif ($r | length) == 0 then "\($n) none"
+        else "\($n) pass" end'
+  fi > "$file.tmp" && mv "$file.tmp" "$file"
+  rmdir "$file.lock" 2>/dev/null
+  exit 0
+fi
+
 input=$(cat)
 j() { printf '%s' "$input" | jq -r "$1 // empty" 2>/dev/null; }
 
@@ -32,6 +61,30 @@ if [ -n "$effort" ]; then
   if [ -n "$head" ]; then head="$head/$effort"; else head="$effort"; fi
 fi
 [ -n "$head" ] && parts+=("$head")
+
+# PR and CI for the branch checked out in the session's directory: #9525 ✓, #9525 ✗2, #9525 ⏳3, #9525 draft.
+cwd=$(j '.workspace.current_dir')
+branch=$([ -n "$cwd" ] && git -C "$cwd" symbolic-ref --short -q HEAD 2>/dev/null)
+if [ -n "$branch" ] && [ "$branch" != main ] && [ "$branch" != master ] && command -v gh >/dev/null; then
+  top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
+  mkdir -p "$cache_dir"
+  file="$cache_dir/$(printf '%s' "$top#$branch" | tr -c 'A-Za-z0-9._-' '_')"
+  find "$cache_dir" -maxdepth 1 -name '*.lock' -mmin +5 -exec rmdir {} + 2>/dev/null
+  if [ -z "$(find "$file" -mmin -2 2>/dev/null)" ] && mkdir "$file.lock" 2>/dev/null; then
+    nohup bash "$0" --pr-refresh "$top" "$file" </dev/null >/dev/null 2>&1 &
+  fi
+  num=; [ -f "$file" ] && read -r num st cnt < "$file"
+  if [ -n "$num" ] && [ "$num" != none ]; then
+    case $st in
+      pass)   pr="${GREEN}#$num ✓${RESET}" ;;
+      fail)   pr="${RED}#$num ✗$cnt${RESET}" ;;
+      run)    pr="${YELLOW}#$num ⏳$cnt${RESET}" ;;
+      merged) pr="#$num merged" ;;
+      *)      pr="#$num $st" ;;
+    esac
+    parts+=("$pr")
+  fi
+fi
 
 used=$(j '.context_window.used_percentage')
 if [ -n "$used" ]; then
