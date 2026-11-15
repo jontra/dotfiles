@@ -5,12 +5,15 @@
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/claude-statusline"
 
 if [ "$1" = "--pr-refresh" ]; then
-  dir=$2 file=$3
-  json=$(cd "$dir" && gh pr view --json number,url,state,isDraft,statusCheckRollup 2>/dev/null)
-  if [ -z "$json" ]; then
-    echo none
-  else
-    printf '%s' "$json" | jq -r '
+  # One line per PR, "<number> <url> <state> [<count>]", from the bottom of the stack up to the
+  # checked-out branch: each PR's base branch is followed down while it has a PR of its own.
+  dir=$2 file=$3 b=$4 lines= seen=
+  for _ in 1 2 3 4 5 6 7 8; do
+    case " $seen " in *" $b "*) break ;; esac
+    seen="$seen $b"
+    json=$(cd "$dir" && gh pr view "$b" --json number,url,state,isDraft,baseRefName,statusCheckRollup 2>/dev/null) || break
+    [ -n "$json" ] || break
+    line=$(printf '%s' "$json" | jq -r '
       def bad: IN("FAILURE","TIMED_OUT","CANCELLED","ACTION_REQUIRED","STARTUP_FAILURE","ERROR");
       "\(.number) \(.url)" as $n
       | [.statusCheckRollup[]? | (.conclusion // .state // "") as $c | (.status // "COMPLETED") as $s
@@ -23,8 +26,13 @@ if [ "$1" = "--pr-refresh" ]; then
         elif $p > 0 then "\($n) run \($p)"
         elif .isDraft then "\($n) draft"
         elif ($r | length) == 0 then "\($n) none"
-        else "\($n) pass" end'
-  fi > "$file.tmp" && mv "$file.tmp" "$file"
+        else "\($n) pass" end')
+    lines="$line${lines:+
+$lines}"
+    b=$(printf '%s' "$json" | jq -r '.baseRefName')
+    { [ "$b" = main ] || [ "$b" = master ] || [ -z "$b" ]; } && break
+  done
+  printf '%s\n' "${lines:-none}" > "$file.tmp" && mv "$file.tmp" "$file"
   rmdir "$file.lock" 2>/dev/null
   exit 0
 fi
@@ -62,30 +70,36 @@ if [ -n "$effort" ]; then
 fi
 [ -n "$head" ] && parts+=("$head")
 
-# PR and CI for the branch checked out in the session's directory: #9525 ✓, #9525 ✗2, #9525 ⏳3, #9525 draft.
+# PR and CI for the branch checked out in the session's directory, with the PRs it stacks on to its left:
+# #10734 ✓ › #10735 draft › #10742 ⏳2. A single PR shows alone: #9525 ✓, #9525 ✗2.
 cwd=$(j '.workspace.current_dir')
 branch=$([ -n "$cwd" ] && git -C "$cwd" symbolic-ref --short -q HEAD 2>/dev/null)
 if [ -n "$branch" ] && [ "$branch" != main ] && [ "$branch" != master ] && command -v gh >/dev/null; then
   top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
   mkdir -p "$cache_dir"
-  file="$cache_dir/$(printf '%s' "$top#$branch" | tr -c 'A-Za-z0-9._-' '_').v2"
+  file="$cache_dir/$(printf '%s' "$top#$branch" | tr -c 'A-Za-z0-9._-' '_').v3"
   find "$cache_dir" -maxdepth 1 -name '*.lock' -mmin +5 -exec rmdir {} + 2>/dev/null
+  find "$cache_dir" -maxdepth 1 -type f ! -name '*.v3' -mmin +10 -delete 2>/dev/null
   if [ -z "$(find "$file" -mmin -2 2>/dev/null)" ] && mkdir "$file.lock" 2>/dev/null; then
-    nohup bash "$0" --pr-refresh "$top" "$file" </dev/null >/dev/null 2>&1 &
+    nohup bash "$0" --pr-refresh "$top" "$file" "$branch" </dev/null >/dev/null 2>&1 &
   fi
-  num=; [ -f "$file" ] && read -r num url st cnt < "$file"
-  if [ -n "$num" ] && [ "$num" != none ]; then
-    # OSC 8 hyperlink: terminals that support it make the PR clickable; the rest show plain text.
-    link=$(printf '\033]8;;%s\033\\#%s\033]8;;\033\\' "$url" "$num")
-    case $st in
-      pass)   pr="${GREEN}$link ✓${RESET}" ;;
-      fail)   pr="${RED}$link ✗$cnt${RESET}" ;;
-      run)    pr="${YELLOW}$link ⏳$cnt${RESET}" ;;
-      merged) pr="$link merged" ;;
-      *)      pr="$link $st" ;;
-    esac
-    parts+=("$pr")
+  stack=
+  if [ -f "$file" ]; then
+    while read -r num url st cnt; do
+      [ -n "$num" ] && [ "$num" != none ] || continue
+      # OSC 8 hyperlink: terminals that support it make the PR clickable; the rest show plain text.
+      link=$(printf '\033]8;;%s\033\\#%s\033]8;;\033\\' "$url" "$num")
+      case $st in
+        pass)   pr="${GREEN}$link ✓${RESET}" ;;
+        fail)   pr="${RED}$link ✗$cnt${RESET}" ;;
+        run)    pr="${YELLOW}$link ⏳$cnt${RESET}" ;;
+        merged) pr="$link merged" ;;
+        *)      pr="$link $st" ;;
+      esac
+      stack="${stack:+$stack › }$pr"
+    done < "$file"
   fi
+  [ -n "$stack" ] && parts+=("$stack")
 fi
 
 used=$(j '.context_window.used_percentage')
