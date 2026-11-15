@@ -6,13 +6,13 @@ cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/claude-statusline"
 
 if [ "$1" = "--pr-refresh" ]; then
   dir=$2 file=$3
-  json=$(cd "$dir" && gh pr view --json number,state,isDraft,statusCheckRollup 2>/dev/null)
+  json=$(cd "$dir" && gh pr view --json number,url,state,isDraft,statusCheckRollup 2>/dev/null)
   if [ -z "$json" ]; then
     echo none
   else
     printf '%s' "$json" | jq -r '
       def bad: IN("FAILURE","TIMED_OUT","CANCELLED","ACTION_REQUIRED","STARTUP_FAILURE","ERROR");
-      .number as $n
+      "\(.number) \(.url)" as $n
       | [.statusCheckRollup[]? | (.conclusion // .state // "") as $c | (.status // "COMPLETED") as $s
          | if ($c | bad) then "fail" elif $s != "COMPLETED" or ($c | IN("", "PENDING", "EXPECTED")) then "run" else "ok" end] as $r
       | ($r | map(select(. == "fail")) | length) as $f
@@ -68,19 +68,21 @@ branch=$([ -n "$cwd" ] && git -C "$cwd" symbolic-ref --short -q HEAD 2>/dev/null
 if [ -n "$branch" ] && [ "$branch" != main ] && [ "$branch" != master ] && command -v gh >/dev/null; then
   top=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)
   mkdir -p "$cache_dir"
-  file="$cache_dir/$(printf '%s' "$top#$branch" | tr -c 'A-Za-z0-9._-' '_')"
+  file="$cache_dir/$(printf '%s' "$top#$branch" | tr -c 'A-Za-z0-9._-' '_').v2"
   find "$cache_dir" -maxdepth 1 -name '*.lock' -mmin +5 -exec rmdir {} + 2>/dev/null
   if [ -z "$(find "$file" -mmin -2 2>/dev/null)" ] && mkdir "$file.lock" 2>/dev/null; then
     nohup bash "$0" --pr-refresh "$top" "$file" </dev/null >/dev/null 2>&1 &
   fi
-  num=; [ -f "$file" ] && read -r num st cnt < "$file"
+  num=; [ -f "$file" ] && read -r num url st cnt < "$file"
   if [ -n "$num" ] && [ "$num" != none ]; then
+    # OSC 8 hyperlink: terminals that support it make the PR clickable; the rest show plain text.
+    link=$(printf '\033]8;;%s\033\\#%s\033]8;;\033\\' "$url" "$num")
     case $st in
-      pass)   pr="${GREEN}#$num ✓${RESET}" ;;
-      fail)   pr="${RED}#$num ✗$cnt${RESET}" ;;
-      run)    pr="${YELLOW}#$num ⏳$cnt${RESET}" ;;
-      merged) pr="#$num merged" ;;
-      *)      pr="#$num $st" ;;
+      pass)   pr="${GREEN}$link ✓${RESET}" ;;
+      fail)   pr="${RED}$link ✗$cnt${RESET}" ;;
+      run)    pr="${YELLOW}$link ⏳$cnt${RESET}" ;;
+      merged) pr="$link merged" ;;
+      *)      pr="$link $st" ;;
     esac
     parts+=("$pr")
   fi
