@@ -1,4 +1,6 @@
 # Not home-directory targets: scripts, data for other steps, and dirs still installed by the scripts.
+# One source for the global agent instructions; dot_claude/CLAUDE.md and dot_codex/AGENTS.md include it.
+agents
 README.md
 bootstrap.sh
 extras.sh
